@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div x-data="simulationEngine()" class="max-w-3xl mx-auto">
+
+    <div class="text-center mb-8">
+        <span
+            class="inline-flex items-center gap-1 bg-blue-50 text-blue-600 font-bold text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-full mb-4 border border-blue-100">
+            <div class="w-1.5 h-1.5 bg-blue-500 rounded-full" :class="wsConnected ? 'animate-pulse' : 'bg-red-500'">
+            </div>
+            SIMULASI EDUKASI
+        </span>
+        <h1 class="text-3xl md:text-4xl font-black text-slate-800 mb-3 tracking-tight">PARMADTIC System Simulation</h1>
+        <p class="text-slate-500 text-sm md:text-base max-w-lg mx-auto leading-relaxed">
+            Pelajari mekanisme sistem multiplier melalui simulasi interaktif. Pahami dinamika probabilitas dan manajemen
+            risiko secara visual.
+        </p>
+    </div>
+
+    <div class="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 overflow-hidden mb-8">
+
+        <div class="h-[26rem] relative flex flex-col items-center justify-center m-2 rounded-[22px] transition-all duration-1000 overflow-hidden border"
+            :class="{
+                 'bg-slate-50 border-slate-200': gameState === 'WAITING' || gameState === 'COUNTDOWN',
+                 'bg-sky-400 border-sky-300': gameState === 'RUNNING' && parseFloat(currentMultiplier) < 2.0,
+                 'bg-indigo-700 border-indigo-600': gameState === 'RUNNING' && parseFloat(currentMultiplier) >= 2.0 && parseFloat(currentMultiplier) < 5.0,
+                 'bg-purple-900 border-purple-800': gameState === 'RUNNING' && parseFloat(currentMultiplier) >= 5.0 && parseFloat(currentMultiplier) < 10.0,
+                 'bg-slate-950 border-slate-800': gameState === 'RUNNING' && parseFloat(currentMultiplier) >= 10.0,
+                 'bg-red-950 border-red-800': gameState === 'CRASHED'
+             }">
+
+            <div class="absolute top-8 right-12 transition-all duration-1000 z-0"
+                :class="gameState === 'RUNNING' ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10'">
+                <i class="fa-solid fa-moon text-6xl text-yellow-100 drop-shadow-[0_0_25px_rgba(253,224,71,0.8)]"></i>
+            </div>
+
+            {% if user.is_authenticated %}
+            <div
+                class="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-xl shadow-sm flex items-center gap-2 border border-slate-100 z-20">
+                <i class="fa-solid fa-wallet text-blue-500 text-xs"></i>
+                <div class="flex flex-col"><span class="text-[9px] text-slate-400 font-bold uppercase">Saldo</span>
+                    <span class="text-xs font-black text-blue-700">Rp {{ wallet_balance|floatformat:0 }}</span>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="relative flex flex-col items-center z-10">
+                <i x-show="gameState !== 'CRASHED'"
+                    class="fa-solid fa-rocket text-6xl rotate-[-90deg] transition-all duration-500 mb-6 drop-shadow-lg"
+                    :class="gameState === 'RUNNING' ? 'text-white animate-bounce' : 'text-blue-600'">
+                </i>
+
+                <div x-show="gameState === 'CRASHED'" class="text-red-500 text-8xl mb-4 animate-pulse"><i
+                        class="fa-solid fa-burst"></i></div>
+
+                <h1 class="text-7xl md:text-9xl font-black tabular-nums tracking-tighter transition-colors duration-300"
+                    :class="gameState === 'RUNNING' ? 'text-white' : (gameState === 'CRASHED' ? 'text-red-500' : 'text-blue-600')"
+                    x-text="gameState === 'COUNTDOWN' ? countdownVal : (gameState === 'WAITING' ? '...' : currentMultiplier + 'x')">
+                </h1>
+            </div>
+        </div>
+
+        <div class="p-8">
+            {% if user.is_authenticated %}
+            <button @click="placeBet()" :disabled="gameState !== 'WAITING' && gameState !== 'COUNTDOWN'"
+                class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-bold py-4 rounded-xl mb-8 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-coins"></i> <span
+                    x-text="(gameState === 'WAITING' || gameState === 'COUNTDOWN') ? 'Pasang Taruhan Rp ' + (betAmount/1000) + 'K' : 'Menunggu Ronde...'"></span>
+            </button>
+            {% else %}
+            <a href="{% url 'login' %}"
+                class="w-full bg-slate-800 text-white font-bold py-4 rounded-xl mb-8 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-lock"></i> Masuk untuk Taruhan
+            </a>
+            {% endif %}
+
+            <div class="space-y-6">
+                <div><label class="text-xs font-black text-slate-500 uppercase">Nominal</label>
+                    <input type="number" x-model="betAmount" class="w-full bg-slate-50 border rounded-xl p-3 mt-2">
+                </div>
+                <div><label class="text-xs font-black text-slate-500 uppercase">Auto Cashout</label>
+                    <input type="number" x-model="cashoutTarget" class="w-full bg-slate-50 border rounded-xl p-3 mt-2"
+                        placeholder="Manual">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('simulationEngine', () => ({
+            wsConnected: false,
+            gameState: 'CONNECTING...',
+            currentMultiplier: '1.00',
+            countdownVal: 5,
+            history: [],
+            betAmount: 100000,
+            cashoutTarget: '',
+            socket: null,
+
+            placeBet() {
+                fetch('/api/simulation/bet/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                    body: JSON.stringify({ amount: this.betAmount, auto_cashout_at: this.cashoutTarget || null })
+                }).then(() => window.location.reload());
+            },
+
+            init() { this.connectWebSocket(); },
+            connectWebSocket() {
+                this.socket = new WebSocket((window.location.protocol === "https:" ? "wss" : "ws") + '://' + window.location.host + '/ws/simulation/');
+                this.socket.onopen = () => { this.wsConnected = true; this.gameState = 'WAITING'; };
+                this.socket.onmessage = (e) => {
+                    const data = JSON.parse(e.data);
+                    if (data.type === 'tick') {
+                        this.gameState = data.state;
+                        if (data.state === 'COUNTDOWN') this.countdownVal = Math.ceil(data.multiplier);
+                        else this.currentMultiplier = parseFloat(data.multiplier).toFixed(2);
+                    }
+                };
+                this.socket.onclose = () => { this.wsConnected = false; setTimeout(() => this.connectWebSocket(), 3000); };
+            }
+        }));
+    });
+</script>
+{% endblock %}

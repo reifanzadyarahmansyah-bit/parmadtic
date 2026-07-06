@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PARMADTIC - System Simulation</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <style>
+        [x-cloak] {
+            display: none !important;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fafafa;
+        }
+
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+
+<body class="text-slate-800 min-h-screen flex flex-col selection:bg-blue-200 pb-20 md:pb-0">
+
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+
+            <a href="{% url 'home' %}" class="flex items-center gap-2">
+                <div class="bg-blue-600 text-white w-8 h-8 flex items-center justify-center rounded-lg shadow-sm">
+                    <i class="fa-solid fa-flask text-sm"></i>
+                </div>
+                <span class="font-black text-slate-800 text-xl tracking-tight">PARMADTIC</span>
+            </a>
+
+            <div class="flex items-center gap-2 md:gap-4">
+                {% if user.is_authenticated %}
+                <div class="flex items-center bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100">
+                    <div
+                        class="bg-blue-200 text-blue-600 w-6 h-6 flex items-center justify-center rounded text-xs mr-2">
+                        <i class="fa-solid fa-wallet"></i>
+                    </div>
+                    <div class="flex flex-col justify-center">
+                        <span
+                            class="text-[9px] text-slate-500 font-bold uppercase tracking-wider leading-none mb-0.5">Saldo</span>
+                        <span class="text-xs md:text-sm font-black text-blue-700 leading-none">Rp {{ wallet_balance|default:"0"|floatformat:0 }}</span>
+                    </div>
+                </div>
+
+                <div
+                    class="hidden md:flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100 transition relative group">
+                    <div
+                        class="bg-slate-200 text-slate-500 w-6 h-6 flex items-center justify-center rounded-full text-xs">
+                        <i class="fa-regular fa-user"></i>
+                    </div>
+                    <span class="text-xs font-bold text-slate-700">{{ username }}</span>
+
+                    <div
+                        class="absolute top-full right-0 mt-2 w-32 bg-white rounded-xl shadow-lg border border-slate-100 hidden group-hover:block overflow-hidden">
+                        <a href="{% url 'logout' %}"
+                            class="block px-4 py-3 text-xs font-bold text-red-500 hover:bg-red-50 text-center">Keluar</a>
+                    </div>
+                </div>
+                {% else %}
+                <a href="{% url 'login' %}"
+                    class="text-xs font-bold text-slate-600 hover:text-blue-600 transition px-3">Masuk</a>
+                <a href="{% url 'register' %}"
+                    class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-sm">Daftar</a>
+                {% endif %}
+            </div>
+
+        </div>
+    </nav>
+
+    <main class="flex-grow container max-w-5xl mx-auto px-4 py-8">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <footer class="hidden md:block bg-slate-50 border-t border-slate-200 py-6 mt-8">
+        <div class="max-w-5xl mx-auto px-4 flex items-center justify-between">
+            <div class="flex items-center gap-2 text-slate-400 text-sm font-bold">
+                <i class="fa-solid fa-flask"></i> PARMADTIC
+            </div>
+            <div class="text-xs text-slate-400 font-medium">
+                PARMADTIC System Simulation. For Educational Purposes Only.
+            </div>
+            <div class="flex gap-4 text-xs font-medium text-slate-500">
+                <a href="#" class="hover:text-blue-600">Bantuan</a>
+                <a href="#" class="hover:text-blue-600">Ketentuan</a>
+                <a href="#" class="hover:text-blue-600">Privasi</a>
+            </div>
+        </div>
+    </footer>
+
+    <div
+        class="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 flex justify-around items-center h-16 z-50 text-[10px] font-bold text-slate-400">
+        <a href="{% url 'home' %}" class="flex flex-col items-center gap-1 text-blue-600 cursor-pointer">
+            <i class="fa-solid fa-house text-lg"></i> Home
+        </a>
+        <div class="flex flex-col items-center gap-1 hover:text-blue-600 cursor-pointer transition">
+            <i class="fa-solid fa-coins text-lg"></i> Deposit
+        </div>
+        <div class="flex flex-col items-center gap-1 hover:text-blue-600 cursor-pointer transition">
+            <i class="fa-solid fa-headset text-lg"></i> Bantuan
+        </div>
+        {% if user.is_authenticated %}
+        <a href="{% url 'logout' %}"
+            class="flex flex-col items-center gap-1 hover:text-red-500 cursor-pointer transition">
+            <i class="fa-solid fa-arrow-right-from-bracket text-lg"></i> Keluar
+        </a>
+        {% else %}
+        <a href="{% url 'login' %}"
+            class="flex flex-col items-center gap-1 hover:text-blue-600 cursor-pointer transition">
+            <i class="fa-regular fa-user text-lg"></i> Masuk
+        </a>
+        {% endif %}
+    </div>
+
+</body>
+
+</html>
